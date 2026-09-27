@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+```
+<title>Department Assets</title>
+```
+
+</head>
+
+<body>
+
+```
+<h2>Department Assets</h2>
+
+<p>
+    <a href="dashboard.html">Back to Dashboard</a>
+</p>
+
+<button onclick="logout()">Logout</button>
+
+<hr>
+
+<h3 id="departmentTitle">
+    My Department Assets
+</h3>
+
+<p id="message"></p>
+
+<table border="1" cellpadding="8">
+
+    <thead>
+
+        <tr>
+            <th>ID</th>
+            <th>Asset Name</th>
+            <th>Asset Code</th>
+            <th>Category</th>
+            <th>Status</th>
+            <th>Department</th>
+        </tr>
+
+    </thead>
+
+    <tbody id="assetTable">
+
+    </tbody>
+
+</table>
+```
+
+<script>
+
+const API_URL = "http://127.0.0.1:8000/api";
+
+const token = localStorage.getItem("token");
+
+const user = JSON.parse(
+    localStorage.getItem("user")
+);
+
+
+// ==========================================
+// CHECK LOGIN
+// ==========================================
+
+if (!token || !user) {
+
+    alert("Please login first.");
+
+    window.location.href = "login.html";
+
+}
+
+
+// ==========================================
+// CHECK HOD
+// ==========================================
+
+if (user.role !== "hod") {
+
+    alert(
+        "Access denied. HOD only."
+    );
+
+    window.location.href =
+        "dashboard.html";
+
+}
+
+
+// ==========================================
+// LOAD DEPARTMENT ASSETS
+// ==========================================
+
+loadDepartmentAssets();
+
+
+async function loadDepartmentAssets() {
+
+    const table =
+        document.getElementById(
+            "assetTable"
+        );
+
+    const message =
+        document.getElementById(
+            "message"
+        );
+
+
+    table.innerHTML = "";
+
+    message.innerText =
+        "Loading assets...";
+
+
+    try {
+
+        const response = await fetch(
+            API_URL + "/hod/assets",
+            {
+
+                method: "GET",
+
+                headers: {
+
+                    "Authorization":
+                        "Bearer " + token,
+
+                    "Accept":
+                        "application/json"
+
+                }
+
+            }
+        );
+
+
+        const result =
+            await response.json();
+
+
+        console.log(
+            "Department assets:",
+            result
+        );
+
+
+        if (!response.ok) {
+
+            message.innerText =
+                result.message ||
+                "Failed to load department assets.";
+
+            return;
+
+        }
+
+
+        const assets =
+            result.data || [];
+
+
+        if (assets.length === 0) {
+
+            message.innerText =
+                "No assets found in your department.";
+
+            return;
+
+        }
+
+
+        message.innerText =
+            "Assets found: " +
+            assets.length;
+
+
+        assets.forEach(function(asset) {
+
+            const category =
+                asset.category
+                    ? asset.category.name
+                    : "N/A";
+
+
+            const department =
+                asset.department
+                    ? asset.department.name
+                    : "Not assigned";
+
+
+            table.innerHTML += `
+
+                <tr>
+
+                    <td>
+                        ${asset.id}
+                    </td>
+
+                    <td>
+                        ${asset.asset_name}
+                    </td>
+
+                    <td>
+                        ${asset.asset_code}
+                    </td>
+
+                    <td>
+                        ${category}
+                    </td>
+
+                    <td>
+                        ${asset.status}
+                    </td>
+
+                    <td>
+                        ${department}
+                    </td>
+
+                </tr>
+
+            `;
+
+        });
+
+    }
+
+    catch (error) {
+
+        console.error(
+            "Error:",
+            error
+        );
+
+        message.innerText =
+            "Unable to connect to the server.";
+
+    }
+
+}
+
+
+// ==========================================
+// LOGOUT
+// ==========================================
+
+function logout() {
+
+    localStorage.removeItem("token");
+
+    localStorage.removeItem("user");
+
+    window.location.href =
+        "login.html";
+
+}
+
+</script>
+
+</body>
+
+</html>

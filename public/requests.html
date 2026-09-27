@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Service Requests</title>
+</head>
+<body>
+
+<h2>Service Requests</h2>
+
+<button onclick="goDashboard()">Back to Dashboard</button>
+<button onclick="logout()">Logout</button>
+
+<hr>
+
+<div id="employeeSection"></div>
+
+<hr>
+
+<h3 id="listTitle"></h3>
+
+<table border="1" cellpadding="5">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Asset</th>
+            <th>Description</th>
+            <th>Status</th>
+            <th id="actionHeader"></th>
+        </tr>
+    </thead>
+
+    <tbody id="requestTable"></tbody>
+</table>
+
+<p id="message"></p>
+
+<script>
+
+const API_URL = "http://127.0.0.1:8000/api";
+const token = localStorage.getItem("token");
+const user = JSON.parse(localStorage.getItem("user"));
+
+//const user = JSON.parse(localStorage.getItem("user"));
+
+console.log(user);
+alert("Current role: " + user.role);
+
+if (!token || !user) {
+    window.location.href = "login.html";
+}
+
+if (user.role === "employee") {
+
+    document.getElementById("employeeSection").innerHTML = `
+        <h3>Create Service Request</h3>
+
+        <label>Asset:</label><br>
+        <select id="asset"></select><br><br>
+
+        <label>Description:</label><br>
+        <textarea id="description"></textarea><br><br>
+
+        <button onclick="createRequest()">Submit Request</button>
+
+        <hr>
+    `;
+
+    document.getElementById("listTitle").innerText = "My Requests";
+
+    loadAssets();
+    loadMyRequests();
+
+} else if (user.role === "hod" || user.role === "admin") {
+
+    document.getElementById("employeeSection").innerHTML = "";
+
+    document.getElementById("listTitle").innerText = "All Service Requests";
+    document.getElementById("actionHeader").innerText = "Action";
+
+    loadAllRequests();
+
+} else {
+
+    alert("Unknown role: " + user.role);
+
+}
+
+async function loadAssets() {
+
+    const response = await fetch(API_URL + "/assets", {
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+    });
+
+    
+    const data = await response.json();
+        
+    console.log(data); // check what Laravel returns
+
+
+    const select = document.getElementById("asset");
+
+    select.innerHTML = "";
+
+    data.data.forEach(function(asset) {
+
+        select.innerHTML += `
+            <option value="${asset.id}">${asset.asset_name}</option>
+        `;
+
+    });
+
+}
+
+async function createRequest() {
+
+    const asset_id = document.getElementById("asset").value;
+    const description = document.getElementById("description").value;
+
+    const response = await fetch(API_URL + "/service-requests", {
+
+        method: "POST",
+
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        },
+
+        body: JSON.stringify({
+            asset_id: asset_id,
+            description: description
+        })
+
+    });
+
+    const data = await response.json();
+
+    if (response.ok) {
+
+        document.getElementById("message").innerText =
+            "Request submitted successfully";
+
+        document.getElementById("description").value = "";
+
+        loadMyRequests();
+
+    } else {
+
+        document.getElementById("message").innerText =
+            data.message || "Failed";
+
+    }
+
+}
+
+async function loadMyRequests() {
+
+    const response = await fetch(API_URL + "/service-requests/my", {
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+    });
+
+    const data = await response.json();
+
+    const table = document.getElementById("requestTable");
+
+    table.innerHTML = "";
+
+    data.data.forEach(function(request) {
+
+        table.innerHTML += `
+            <tr>
+                <td>${request.id}</td>
+                <td>${request.asset.asset_name}</td>
+                <td>${request.description}</td>
+                <td>${request.status}</td>
+                <td></td>
+            </tr>
+        `;
+
+    });
+
+}
+
+async function loadAllRequests() {
+
+    const response = await fetch(API_URL + "/service-requests", {
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+    });
+
+    const data = await response.json();
+
+    const table = document.getElementById("requestTable");
+
+    table.innerHTML = "";
+
+    data.data.forEach(function(request) {
+
+        let actions = "-";
+
+        // HOD: only approve or reject pending requests
+        if (user.role === "hod") {
+
+            if (request.status === "pending") {
+
+                actions = `
+                    <button onclick="approveRequest(${request.id})">Approve</button>
+                    <button onclick="rejectRequest(${request.id})">Reject</button>
+                `;
+
+            }
+
+        }
+
+        // Admin: approve/reject pending, complete approved
+        else if (user.role === "admin") {
+
+            if (request.status === "pending") {
+
+                actions = `
+                    <button onclick="approveRequest(${request.id})">Approve</button>
+                    <button onclick="rejectRequest(${request.id})">Reject</button>
+                `;
+
+            } else if (request.status === "approved") {
+
+                actions = `
+                    <button onclick="completeRequest(${request.id})">Complete</button>
+                `;
+
+            }
+
+        }
+
+        table.innerHTML += `
+            <tr>
+                <td>${request.id}</td>
+                <td>${request.asset.asset_name}</td>
+                <td>${request.description}</td>
+                <td>${request.status}</td>
+                <td>${actions}</td>
+            </tr>
+        `;
+
+    });
+
+}
+
+async function approveRequest(id) {
+
+    const response = await fetch(API_URL + "/service-requests/" + id + "/approve", {
+
+        method: "PUT",
+
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+
+    });
+
+    if (response.ok) {
+
+        loadAllRequests();
+
+    } else {
+
+        alert("Approval failed");
+
+    }
+
+}
+
+async function rejectRequest(id) {
+
+    const response = await fetch(API_URL + "/service-requests/" + id + "/reject", {
+
+        method: "PUT",
+
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+
+    });
+
+    if (response.ok) {
+
+        loadAllRequests();
+
+    } else {
+
+        alert("Rejection failed");
+
+    }
+
+}
+async function completeRequest(id) {
+
+    const response = await fetch(API_URL + "/service-requests/" + id + "/complete", {
+
+        method: "PUT",
+
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+
+    });
+
+    if (response.ok) {
+
+        loadAllRequests();
+
+    } else {
+
+        alert("Complete action failed");
+
+    }
+
+}
+function goDashboard() {
+
+    window.location.href = "dashboard.html";
+
+}
+
+function logout() {
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    window.location.href = "login.html";
+
+}
+
+</script>
+
+</body>
+</html>

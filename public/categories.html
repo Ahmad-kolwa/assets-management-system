@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Category Management</title>
+</head>
+<body>
+
+    <h2>Category Management</h2>
+
+    <button onclick="goDashboard()">Back to Dashboard</button>
+    <button onclick="logout()">Logout</button>
+
+    <hr>
+
+    <h3>Add Category</h3>
+
+    <label>Category Name:</label><br>
+    <input type="text" id="categoryName"><br><br>
+
+    <button onclick="addCategory()">Add Category</button>
+
+    <p id="message"></p>
+
+    <hr>
+
+    <h3>All Categories</h3>
+
+    <button onclick="loadCategories()">Refresh</button>
+
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+            </tr>
+        </thead>
+
+        <tbody id="categoryTable">
+        </tbody>
+    </table>
+
+    <script>
+
+        const API_URL = "http://127.0.0.1:8000/api";
+        const token = localStorage.getItem("token");
+        const user = JSON.parse(localStorage.getItem("user"));
+
+        // if not logged in
+        if (!token || !user) {
+            window.location.href = "login.html";
+        }
+
+        // only admin can manage categories
+        if (user.role !== "admin") {
+            alert("Access denied");
+            window.location.href = "dashboard.html";
+        }
+
+        async function loadCategories() {
+
+            const response = await fetch(API_URL + "/categories", {
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Accept": "application/json"
+                }
+            });
+
+            const data = await response.json();
+
+            const table = document.getElementById("categoryTable");
+
+            table.innerHTML = "";
+
+            data.data.forEach(function(category) {
+
+                table.innerHTML += `
+                    <tr>
+                        <td>${category.id}</td>
+                        <td>${category.name}</td>
+                    </tr>
+                `;
+
+            });
+
+        }
+
+        async function addCategory() {
+
+            const name = document.getElementById("categoryName").value;
+
+            const response = await fetch(API_URL + "/categories", {
+
+                method: "POST",
+
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": "Bearer " + token,
+                    "Accept": "application/json"
+                },
+
+                body: JSON.stringify({
+                    name: name
+                })
+
+            });
+
+            const data = await response.json();
+
+            const message = document.getElementById("message");
+
+            if (response.ok) {
+
+                message.innerText = "Category added successfully";
+
+                document.getElementById("categoryName").value = "";
+
+                loadCategories();
+
+            } else {
+
+                message.innerText = data.message || "Failed to add category";
+
+            }
+
+        }
+
+        function goDashboard() {
+            window.location.href = "dashboard.html";
+        }
+
+        function logout() {
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+
+            window.location.href = "login.html";
+
+        }
+
+        // load categories automatically
+        loadCategories();
+
+    </script>
+
+</body>
+</html>

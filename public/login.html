@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login</title>
+</head>
+<body>
+
+    <h2>Asset Management System Login</h2>
+
+    <label>Email:</label><br>
+    <input type="email" id="email"><br><br>
+
+    <label>Password:</label><br>
+    <input type="password" id="password"><br><br>
+
+    <button onclick="login()">Login</button>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000/api";
+
+        async function login() {
+
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+
+            try {
+
+                const response = await fetch(API_URL + "/login", {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Accept": "application/json"
+                    },
+
+                    body: JSON.stringify({
+                        email: email,
+                        password: password
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+
+                    localStorage.setItem("token", data.token);
+                    localStorage.setItem("user", JSON.stringify(data.user));
+
+                    alert("Login successful");
+
+                    window.location.href = "dashboard.html";
+
+                } else {
+
+                    alert(data.message);
+
+                }
+
+            } catch (error) {
+
+                alert("Cannot connect to Laravel API");
+
+            }
+        }
+    </script>
+
+</body>
+</html>

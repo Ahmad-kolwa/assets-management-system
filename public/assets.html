@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Asset Management</title>
+</head>
+<body>
+
+    <h2>Asset Management</h2>
+
+    <button onclick="goDashboard()">Back to Dashboard</button>
+    <button onclick="logout()">Logout</button>
+
+    <hr>
+
+    <h3>Add / Edit Asset</h3>
+
+    <!-- hidden field for update -->
+    <input type="hidden" id="assetId">
+
+    <label>Category:</label><br>
+    <select id="category"></select><br><br>
+
+    <label>Department:</label><br>
+<select id="department_id"></select><br><br>
+
+
+    <label>Asset Name:</label><br>
+    <input type="text" id="assetName"><br><br>
+
+    <label>Asset Code:</label><br>
+    <input type="text" id="assetCode"><br><br>
+
+    <label>Status:</label><br>
+    <select id="status">
+        <option value="available">Available</option>
+        <option value="assigned">Assigned</option>
+        <option value="maintenance">Maintenance</option>
+    </select><br><br>
+
+    <button onclick="saveAsset()">Save Asset</button>
+
+    <p id="message"></p>
+
+    <hr>
+
+    <h3>All Assets</h3>
+
+    <button onclick="loadAssets()">Refresh</button>
+
+    <table border="1" cellpadding="5">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Category</th>
+                <th>Asset Name</th>
+                <th>Asset Code</th>
+                <th>Status</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+
+        <tbody id="assetTable"></tbody>
+    </table>
+
+<script>
+
+const API_URL = "http://127.0.0.1:8000/api";
+const token = localStorage.getItem("token");
+const user = JSON.parse(localStorage.getItem("user"));
+
+// Check login
+if (!token || !user) {
+    window.location.href = "login.html";
+}
+
+// Only admin can manage assets
+if (user.role !== "admin") {
+    alert("Access denied");
+    window.location.href = "dashboard.html";
+}
+
+// Load categories into dropdown
+async function loadCategories() {
+
+    const response = await fetch(API_URL + "/categories", {
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+    });
+
+    const data = await response.json();
+
+    const select = document.getElementById("category");
+
+    select.innerHTML = "";
+
+    data.data.forEach(function(category) {
+
+        select.innerHTML += `
+            <option value="${category.id}">${category.name}</option>
+        `;
+
+    });
+
+}
+
+// Load all assets
+async function loadAssets() {
+
+    const response = await fetch(API_URL + "/assets", {
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+    });
+
+    const data = await response.json();
+
+    const table = document.getElementById("assetTable");
+
+    table.innerHTML = "";
+
+    data.data.forEach(function(asset) {
+
+        table.innerHTML += `
+            <tr>
+                <td>${asset.id}</td>
+                <td>${asset.category.name}</td>
+                <td>${asset.asset_name}</td>
+                <td>${asset.asset_code}</td>
+                <td>${asset.status}</td>
+                <td>
+                    <button onclick="editAsset(${asset.id}, ${asset.category_id}, '${asset.asset_name}', '${asset.asset_code}', '${asset.status}')">Edit</button>
+                    <button onclick="deleteAsset(${asset.id})">Delete</button>
+                </td>
+            </tr>
+        `;
+
+    });
+
+}
+
+// Create or update asset
+async function saveAsset() {
+
+    const id = document.getElementById("assetId").value;
+
+    const category_id = document.getElementById("category").value;
+    const department_id = document.getElementById("department_id").value;
+    const asset_name = document.getElementById("assetName").value;
+    const asset_code = document.getElementById("assetCode").value;
+    const status = document.getElementById("status").value;
+
+    let url = API_URL + "/assets";
+    let method = "POST";
+
+    if (id !== "") {
+
+        url = API_URL + "/assets/" + id;
+        method = "PUT";
+
+    }
+
+    const response = await fetch(url, {
+
+        method: method,
+
+        headers: {
+            "Content-Type": "application/json",
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        },
+
+        body: JSON.stringify({
+            category_id: category_id,
+            asset_name: asset_name,
+            asset_code: asset_code,
+            status: status
+        })
+
+    });
+
+    const data = await response.json();
+
+    const message = document.getElementById("message");
+
+    if (response.ok) {
+
+        if (id === "") {
+
+            message.innerText = "Asset added successfully";
+
+        } else {
+
+            message.innerText = "Asset updated successfully";
+
+        }
+
+        clearForm();
+
+        loadAssets();
+
+    } else {
+
+        message.innerText = data.message || "Operation failed";
+
+    }
+
+}
+
+// Fill form for editing
+function editAsset(id, category_id, department_id,asset_name, asset_code, status) {
+
+    document.getElementById("assetId").value = id;
+    document.getElementById("category").value = category_id;
+    document.getElementById("departmentId").value = department_id;
+    document.getElementById("assetName").value = asset_name;
+    document.getElementById("assetCode").value = asset_code;
+    document.getElementById("status").value = status;
+
+}
+
+// Delete asset
+async function deleteAsset(id) {
+
+    if (!confirm("Delete this asset?")) {
+        return;
+    }
+
+    const response = await fetch(API_URL + "/assets/" + id, {
+
+        method: "DELETE",
+
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+
+    });
+
+    if (response.ok) {
+
+        loadAssets();
+
+    } else {
+
+        alert("Delete failed");
+
+    }
+
+}
+
+async function loadDepartments() {
+
+    const response = await fetch(API_URL + "/departments", {
+        headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/json"
+        }
+    });
+
+    const data = await response.json();
+
+    const select = document.getElementById("department_id");
+
+    select.innerHTML = "";
+
+    data.data.forEach(function(department) {
+
+        select.innerHTML += `
+            <option value="${department.id}">
+                ${department.name}
+            </option>
+        `;
+
+    });
+
+}
+
+// Clear form after save
+function clearForm() {
+
+    document.getElementById("assetId").value = "";
+    document.getElementById("assetName").value = "";
+    document.getElementById("assetCode").value = "";
+    document.getElementById("status").value = "available";
+
+}
+
+// Back to dashboard
+function goDashboard() {
+    window.location.href = "dashboard.html";
+}
+
+// Logout
+function logout() {
+
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    window.location.href = "login.html";
+
+}
+
+// Load data automatically
+loadCategories();
+loadDepartments();
+loadAssets();
+
+</script>
+
+</body>
+</html>

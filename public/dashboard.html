@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Dashboard</title>
+</head>
+<body>
+
+    <h2 id="welcome"></h2>
+
+    <div id="dashboard"></div>
+
+    <br>
+
+    <button onclick="logout()">Logout</button>
+
+    <script>
+
+        const user = JSON.parse(localStorage.getItem("user"));
+        const token = localStorage.getItem("token");
+
+        if (!user || !token) {
+            window.location.href = "login.html";
+        }
+
+        document.getElementById("welcome").innerText =
+            "Welcome " + user.name + " (" + user.role + ")";
+
+        const dashboard = document.getElementById("dashboard");
+
+        if (user.role === "admin") {
+
+            dashboard.innerHTML = `
+                <h3>Administrator Dashboard</h3>
+                  <ul>
+            <li><a href="users.html">User Management</a></li>
+            <li><a href="roles.html">Role Assignment</a></li>
+            <li><a href="departments.html">Department Management</a></li>
+            <li><a href="categories.html">Category Management</a></li>
+            <li><a href="assets.html">Asset Management</a></li>
+            <li><a href="requests.html">Service Requests</a></li>
+             <li><a href="profile.html">Profile</a></li>
+            <li><a href="reports.html">Reports</a></li>
+            <li><a href="settings.html">System Settings</a></li>
+        </ul>
+
+            `;
+
+        } else if (user.role === "hod") {
+
+            dashboard.innerHTML = `
+                <h3>Head of Department Dashboard</h3>
+                  <ul>
+                        <li><a href="hod-assets.html">Department Assets</a></li>
+    <li><a href="hod-staff.html">Department Staff</a></li>
+    <li><a href="hod-requests.html">Department Requests</a></li>
+    <li><a href="hod-reports.html">Department Reports</a></li>
+    <li><a href="profile.html">Profile</a></li>
+
+            <li><a href="department_assets.html">Department Assets</a></li>
+            <li><a href="department_staff.html">Department Staff</a></li>
+            <li><a href="requests.html">Status of  Requests</a></li>
+         <li><a href="department_reports.html">Department Reports</a></li>
+          <li><a href="profile.html">Profile</a></li>
+            <li><a href="notifications.html">Notifications</a></li>
+        </ul>
+
+            `;
+
+        } else if (user.role === "employee") {
+
+            dashboard.innerHTML = `
+                <h3>Employee Dashboard</h3>
+               <ul>
+        
+            <li><a href="requests.html">Report Asset Issue</a></li>
+            <li><a href="requests.html">Create Service Request</a></li>
+            <li><a href="requests.html">My Requests</a></li>
+            <li><a href="requests.html">Request Status</a></li>
+            <li><a href="profile.html">Profile</a></li>
+            <li><a href="notifications.html">Notifications</a></li>
+        </ul>
+
+            `;
+
+        }
+
+        function logout() {
+
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+
+            window.location.href = "login.html";
+
+        }
+
+    </script>
+
+</body>
+</html>
